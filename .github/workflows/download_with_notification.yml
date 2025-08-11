@@ -78,7 +78,7 @@ jobs:
       PDF_UPLOAD_NAME: ${{ github.event.inputs.PDF_UPLOAD_NAME }}
 
       # 通知相关常量（在这里修改配置）
-      NOTIFICATION_REPO: 'your-username/notification-service'  # 修改为你的通知服务仓库
+      NOTIFICATION_REPO:  ${{ secrets.NOTIFICATION_REPO }} # 'your-username/notification-service'  # 修改为你的通知服务仓库
       ENABLE_NOTIFICATION: true
       NOTIFICATION_TITLE: 'JM漫画下载完成'
 
