@@ -534,15 +534,136 @@ class SendQQEmailPlugin(JmOptionPlugin):
                content,
                album=None,
                downloader=None,
+               send_attachments=True,
+               zip_name=None,
+               pdf_zip_name=None,
                ) -> None:
         self.require_param(msg_from and msg_to and password, '发件人、收件人、授权码都不能为空')
 
-        from common import EmailConfig
-        econfig = EmailConfig(msg_from, msg_to, password)
-        epostman = econfig.create_email_postman()
-        epostman.send(content, title)
+        import os
+        
+        # 处理布尔值参数（可能来自环境变量字符串）
+        if isinstance(send_attachments, str):
+            send_attachments = send_attachments.lower() in ('true', '1', 'yes', 'on')
+        
+        # 准备附件列表
+        attachments = []
+        if send_attachments:
+            attachments = self._prepare_attachments(zip_name, pdf_zip_name)
+        
+        # 尝试使用 commonX 的邮件功能
+        try:
+            from common import EmailConfig
+            econfig = EmailConfig(msg_from, msg_to, password)
+            epostman = econfig.create_email_postman()
+            
+            # 尝试发送带附件的邮件
+            if attachments:
+                try:
+                    if hasattr(epostman, 'send_with_attachments'):
+                        epostman.send_with_attachments(content, title, attachments)
+                        self.log(f'Email sent successfully with {len(attachments)} attachments')
+                        return
+                    else:
+                        # 如果不支持附件，使用自定义实现
+                        self._send_email_with_attachments(msg_from, msg_to, password, title, content, attachments)
+                        return
+                except Exception as e:
+                    self.log(f'Failed to send email with commonX: {e}', 'warning')
+                    # 回退到自定义实现
+                    self._send_email_with_attachments(msg_from, msg_to, password, title, content, attachments)
+                    return
+            else:
+                epostman.send(content, title)
+                self.log('Email sent successfully')
+                return
+                
+        except ImportError:
+            self.log('commonX not available, using built-in email implementation', 'warning')
+        except Exception as e:
+            self.log(f'Failed to use commonX email: {e}', 'warning')
+        
+        # 使用自定义邮件实现
+        self._send_email_with_attachments(msg_from, msg_to, password, title, content, attachments)
 
-        self.log('Email sent successfully')
+    def _prepare_attachments(self, zip_name, pdf_zip_name):
+        """准备邮件附件"""
+        import os
+        attachments = []
+        
+        # 获取环境变量中的目录路径
+        download_dir = os.environ.get('JM_DOWNLOAD_DIR', '/home/runner/work/jmcomic/download/')
+        pdf_dir = os.environ.get('JM_PDF_DIR', '/home/runner/work/jmcomic/pdf/')
+        
+        # 添加图片压缩包
+        if zip_name:
+            zip_path = os.path.join(download_dir, zip_name)
+            if os.path.exists(zip_path):
+                attachments.append(zip_path)
+                self.log(f'Added image archive to attachments: {zip_path}')
+            else:
+                self.log(f'Image archive not found: {zip_path}', 'warning')
+        
+        # 添加PDF压缩包
+        if pdf_zip_name:
+            pdf_zip_path = os.path.join(pdf_dir, pdf_zip_name)
+            if os.path.exists(pdf_zip_path):
+                attachments.append(pdf_zip_path)
+                self.log(f'Added PDF archive to attachments: {pdf_zip_path}')
+            else:
+                self.log(f'PDF archive not found: {pdf_zip_path}', 'warning')
+        
+        return attachments
+
+    def _send_email_with_attachments(self, msg_from, msg_to, password, title, content, attachments):
+        """使用内置的SMTP发送带附件的邮件"""
+        try:
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            from email.mime.base import MIMEBase
+            from email import encoders
+            import os
+            
+            # 创建邮件对象
+            msg = MIMEMultipart()
+            msg['From'] = msg_from
+            msg['To'] = msg_to
+            msg['Subject'] = title
+            
+            # 添加邮件正文
+            msg.attach(MIMEText(content, 'plain', 'utf-8'))
+            
+            # 添加附件
+            for attachment_path in attachments:
+                if os.path.exists(attachment_path):
+                    with open(attachment_path, 'rb') as attachment:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(attachment.read())
+                    
+                    encoders.encode_base64(part)
+                    filename = os.path.basename(attachment_path)
+                    part.add_header(
+                        'Content-Disposition',
+                        f'attachment; filename= {filename}',
+                    )
+                    msg.attach(part)
+                    self.log(f'Attached file: {filename}')
+            
+            # 发送邮件
+            server = smtplib.SMTP('smtp.qq.com', 587)
+            server.starttls()
+            server.login(msg_from, password)
+            text = msg.as_string()
+            server.sendmail(msg_from, msg_to, text)
+            server.quit()
+            
+            attachment_count = len(attachments)
+            self.log(f'Email sent successfully with {attachment_count} attachments using built-in SMTP')
+            
+        except Exception as e:
+            self.log(f'Failed to send email: {e}', 'error')
+            raise
 
 
 class LogTopicFilterPlugin(JmOptionPlugin):

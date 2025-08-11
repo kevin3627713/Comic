@@ -34,3 +34,6 @@ plugins:
         password: ${EMAIL_PASS}
         title: ${EMAIL_TITLE}
         content: ${EMAIL_CONTENT}
+        send_attachments: ${SEND_EMAIL_ATTACHMENTS}
+        zip_name: ${ZIP_NAME}
+        pdf_zip_name: ${PDF_ZIP_NAME}
