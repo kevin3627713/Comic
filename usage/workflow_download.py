@@ -44,6 +44,12 @@ def main():
     album_id_set = get_id_set('JM_ALBUM_IDS', jm_albums)
     photo_id_set = get_id_set('JM_PHOTO_IDS', jm_photos)
 
+    # 如果启用PDF，创建PDF目录
+    enable_pdf = env('ENABLE_PDF', 'false').lower() == 'true'
+    if enable_pdf:
+        pdf_dir = env('JM_PDF_DIR', workspace())
+        mkdir_if_not_exists(pdf_dir)
+
     helper = JmcomicUI()
     helper.album_id_list = list(album_id_set)
     helper.photo_id_list = list(photo_id_set)
@@ -54,8 +60,15 @@ def main():
 
 
 def get_option():
+    # 根据是否启用PDF选择配置文件
+    enable_pdf = env('ENABLE_PDF', 'false').lower() == 'true'
+    if enable_pdf:
+        config_file = '../../assets/option/option_workflow_download_with_pdf.yml'
+    else:
+        config_file = '../../assets/option/option_workflow_download.yml'
+    
     # 读取 option 配置文件
-    option = create_option(os.path.abspath(os.path.join(__file__, '../../assets/option/option_workflow_download.yml')))
+    option = create_option(os.path.abspath(os.path.join(__file__, config_file)))
 
     # 支持工作流覆盖配置文件的配置
     cover_option_config(option)

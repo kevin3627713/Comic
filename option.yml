@@ -1,0 +1,61 @@
+# JMComic 配置文件
+# 功能：下载完整本后转为PDF，保存到指定目录，使用移动端客户端
+
+# 开启日志输出
+log: true
+
+# 客户端配置 - 使用移动端实现
+client:
+  # 使用移动端API，不限IP兼容性好
+  impl: api
+  # 请求失败重试次数
+  retry_times: 5
+  
+  postman:
+    meta_data:
+      # 使用系统代理
+      proxies: system
+
+# 下载配置
+download:
+  # 启用磁盘缓存，避免重复下载
+  cache: true
+  image:
+    # 解码JM的混淆图片
+    decode: true
+    # 保持原始图片格式
+    suffix: null
+  threading:
+    # 同时下载30张图片
+    image: 30
+    # 同时下载16个章节
+    photo: 16
+
+# 文件夹规则配置
+dir_rule:
+  # 根目录设置为指定路径
+  base_dir: D:/文档/DOWNLOADS/漫画/
+  # 规则：根目录 / 本子标题 / 章节标题
+  rule: Bd_Atitle_Ptitle
+
+# 插件配置
+plugins:
+  after_init:
+    # 硬件占用监控插件
+    - plugin: usage_log
+      kwargs:
+        interval: 1.0
+        enable_warning: true
+
+  # 下载完整本后执行的插件
+  after_album:
+    # PDF转换插件 - 将整个本子合并为一个PDF
+    - plugin: img2pdf
+      kwargs:
+        # PDF存放目录
+        pdf_dir: D:/文档/DOWNLOADS/漫画/PDF/
+        # PDF文件命名规则：使用本子标题
+        filename_rule: Atitle
+        # 可选：设置PDF密码保护
+        # encrypt:
+        #   password: 123456
