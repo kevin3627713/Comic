@@ -61,17 +61,17 @@ on:
         description: PDF上传文件名称
         required: false
 
-      EMAIL_TITLE:
-        type: string
-        default: JM漫画下载完成
-        description: 邮件标题
-        required: false
+      # EMAIL_TITLE:
+      #   type: string
+      #   default: JM漫画下载完成
+      #   description: 邮件标题
+      #   required: false
 
-      EMAIL_CONTENT:
-        type: string
-        default: 您请求的JM漫画已下载完成，请查看附件。
-        description: 邮件内容
-        required: false
+      # EMAIL_CONTENT:
+      #   type: string
+      #   default: 您请求的JM漫画已下载完成，请查看附件。
+      #   description: 邮件内容
+      #   required: false
 
 jobs:
   crawler:
@@ -88,8 +88,8 @@ jobs:
       ENABLE_PDF: ${{ github.event.inputs.ENABLE_PDF }}
       PDF_ZIP_NAME: ${{ github.event.inputs.PDF_ZIP_NAME }}
       PDF_UPLOAD_NAME: ${{ github.event.inputs.PDF_UPLOAD_NAME }}
-      EMAIL_TITLE: ${{ github.event.inputs.EMAIL_TITLE }}
-      EMAIL_CONTENT: ${{ github.event.inputs.EMAIL_CONTENT }}
+      EMAIL_TITLE: "JM漫画下载完成"
+      EMAIL_CONTENT: "您请求的JM漫画已下载完成，请查看附件。"
 
       # 登录相关secrets
       JM_USERNAME: ${{ secrets.JM_USERNAME }}
