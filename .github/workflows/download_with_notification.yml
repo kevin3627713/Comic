@@ -132,7 +132,7 @@ jobs:
           mv "../$ZIP_NAME" .
 
       - name: 压缩PDF文件
-        if: ${{ github.event.inputs.ENABLE_PDF == 'true' }}
+        if: ${{ env.ENABLE_PDF == 'true' }}
         run: |
           if [ -d "$JM_PDF_DIR" ] && [ "$(ls -A $JM_PDF_DIR)" ]; then
             cd $JM_PDF_DIR
@@ -151,7 +151,7 @@ jobs:
           retention-days: 90
 
       - name: 上传PDF结果
-        if: ${{ github.event.inputs.ENABLE_PDF == 'true' }}
+        if: ${{ env.ENABLE_PDF == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PDF_UPLOAD_NAME }}
@@ -161,7 +161,7 @@ jobs:
 
       # 准备通知附件
       - name: 准备通知附件
-        if: ${{ github.event.inputs.ENABLE_NOTIFICATION == 'true' }}
+        if: ${{ env.ENABLE_NOTIFICATION == 'true' }}
         id: prepare_attachments
         run: |
           echo "准备通知附件..."
@@ -208,16 +208,16 @@ jobs:
 
       # 发送通知
       - name: 发送下载完成通知
-        if: ${{ github.event.inputs.ENABLE_NOTIFICATION == 'true' }}
+        if: ${{ env.ENABLE_NOTIFICATION == 'true' }}
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.NOTIFICATION_TOKEN }}
-          repository: ${{ github.event.inputs.NOTIFICATION_REPO }}
+          repository: ${{ secrets.NOTIFICATION_REPO }}
           event-type: send-notification
           client-payload: |
             {
-              "title": "${{ github.event.inputs.NOTIFICATION_TITLE }}",
-              "content": "JM漫画下载任务已完成！\n\n📋 任务详情：\n- 本子ID: ${{ github.event.inputs.JM_ALBUM_IDS || '未指定' }}\n- 章节ID: ${{ github.event.inputs.JM_PHOTO_IDS || '未指定' }}\n- 压缩包: ${{ github.event.inputs.ZIP_NAME }}\n- PDF文件: ${{ github.event.inputs.ENABLE_PDF == 'true' && github.event.inputs.PDF_ZIP_NAME || '未生成' }}\n- 执行时间: ${{ github.run_id }}\n\n🔗 查看详情: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "title": "${{ env.NOTIFICATION_TITLE }}",
+              "content": "JM漫画下载任务已完成！\n\n📋 任务详情：\n- 本子ID: ${{ env.JM_ALBUM_IDS || '未指定' }}\n- 章节ID: ${{ env.JM_PHOTO_IDS || '未指定' }}\n- 压缩包: ${{ env.ZIP_NAME }}\n- PDF文件: ${{ env.ENABLE_PDF == 'true' && env.PDF_ZIP_NAME || '未生成' }}\n- 执行时间: ${{ github.run_id }}\n\n🔗 查看详情: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
               "source": "jmcomic-crawler",
               "timestamp": "${{ github.event.head_commit.timestamp }}",
               "attachments": ${{ steps.prepare_attachments.outputs.attachments }},
@@ -231,10 +231,10 @@ jobs:
 
       # 通知发送状态记录
       - name: 记录通知状态
-        if: ${{ github.event.inputs.ENABLE_NOTIFICATION == 'true' }}
+        if: ${{ env.ENABLE_NOTIFICATION == 'true' }}
         run: |
           echo "=== 通知发送完成 ==="
-          echo "目标仓库: ${{ github.event.inputs.NOTIFICATION_REPO }}"
-          echo "通知标题: ${{ github.event.inputs.NOTIFICATION_TITLE }}"
+          echo "目标仓库: ${{ env.NOTIFICATION_REPO }}"
+          echo "通知标题: ${{ env.NOTIFICATION_TITLE }}"
           echo "附件数量: $(echo '${{ steps.prepare_attachments.outputs.attachments }}' | jq length)"
           echo "发送时间: $(date)"
