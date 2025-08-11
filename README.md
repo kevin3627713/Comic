@@ -8,6 +8,8 @@
 
 [【指路】教程：导出并下载你的禁漫收藏夹数据](./assets/docs/sources/tutorial/10_export_favorites.md)
 
+[【新功能】邮件通知：下载完成后自动发送邮件附件](./EMAIL_NOTIFICATION_SETUP.md)
+
 **友情提示：珍爱JM，为了减轻JM的服务器压力，请不要一次性爬取太多本子，西门🙏🙏🙏**.
 
 ## 项目介绍
@@ -27,6 +29,42 @@
 - 本子/章节详情
 - 个人收藏夹
 - 接口加解密（APP的接口）
+- **邮件通知**：下载完成后自动发送邮件附件（新功能）
+
+## 新功能：邮件通知
+
+现在支持在GitHub Actions下载完成后，自动将压缩文件（tar.gz和zip）作为邮件附件发送到您的邮箱！
+
+### 主要特点
+
+- ✅ 支持大附件自动分割（超过20MB自动分割）
+- ✅ 支持多种邮件服务（Gmail、QQ邮箱、163邮箱等）
+- ✅ 两种发送方式：通过notification-service或直接SMTP
+- ✅ 完整的错误处理和重试机制
+- ✅ 自动清理临时文件
+
+### 快速开始
+
+1. **配置邮箱Secrets**（在GitHub仓库的Settings → Secrets中添加）：
+   ```
+   SMTP_SERVER=smtp.gmail.com
+   SMTP_SSL=true
+   SMTP_EMAIL=your_email@gmail.com
+   SMTP_PASSWORD=your_app_password
+   SMTP_NAME=JM漫画下载服务
+   ```
+
+2. **使用新的工作流**：
+   - 选择 "下载JM本子并发送邮件 (dispatch)" 工作流
+   - 填入本子ID和邮件标题
+   - 运行后会自动发送邮件附件
+
+3. **本地测试**：
+   ```bash
+   python test_email_notification.py
+   ```
+
+详细配置说明请参考：[邮件通知设置指南](./EMAIL_NOTIFICATION_SETUP.md)
 
 ## 安装教程
 
