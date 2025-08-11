@@ -1,0 +1,240 @@
+name: 下载JM本子并发送通知
+
+on:
+  workflow_dispatch:
+    inputs:
+      JM_ALBUM_IDS:
+        type: string
+        description: 本子id（多个id用-隔开，如 '123-456-789'）
+        required: false
+
+      JM_PHOTO_IDS:
+        type: string
+        description: 章节id（单独下载章节，多个id同上）
+        required: false
+
+      CLIENT_IMPL:
+        type: string
+        description: 客户端类型（client.impl），下载失败时，你可以尝试填入此项重试。'api' 表示移动端，'html' 表示网页端。
+        default: ''
+        required: false
+
+      IMAGE_SUFFIX:
+        type: string
+        description: 图片后缀（download.cache.suffix），默认为空，表示不做图片格式转换。可填入例如 'png' 'jpg'
+        default: ''
+        required: false
+
+      DIR_RULE:
+        type: string
+        description: 下载文件夹规则（dir_rule.rule）。默认使用配置文件的 'Bd_Aauthor_Atitle_Pindex'。
+        default: ''
+        required: false
+
+      ZIP_NAME:
+        type: string
+        default: 本子.tar.gz
+        description: 压缩文件名称
+        required: false
+
+      UPLOAD_NAME:
+        type: string
+        default: Click me to download
+        description: 上传文件名称
+        required: false
+
+      ENABLE_PDF:
+        type: boolean
+        default: true
+        description: 是否生成PDF文件
+        required: false
+
+      PDF_ZIP_NAME:
+        type: string
+        default: 本子PDF.zip
+        description: PDF压缩文件名称
+        required: false
+
+      PDF_UPLOAD_NAME:
+        type: string
+        default: Click me to download PDF
+        description: PDF上传文件名称
+        required: false
+
+jobs:
+  crawler:
+    runs-on: ubuntu-latest
+    env:
+      # 工作流输入
+      JM_ALBUM_IDS: ${{ github.event.inputs.JM_ALBUM_IDS }}
+      JM_PHOTO_IDS: ${{ github.event.inputs.JM_PHOTO_IDS }}
+      DIR_RULE: ${{ github.event.inputs.DIR_RULE }}
+      CLIENT_IMPL: ${{ github.event.inputs.CLIENT_IMPL }}
+      ZIP_NAME: ${{ github.event.inputs.ZIP_NAME }}
+      UPLOAD_NAME: ${{ github.event.inputs.UPLOAD_NAME }}
+      IMAGE_SUFFIX: ${{ github.event.inputs.IMAGE_SUFFIX }}
+      ENABLE_PDF: ${{ github.event.inputs.ENABLE_PDF }}
+      PDF_ZIP_NAME: ${{ github.event.inputs.PDF_ZIP_NAME }}
+      PDF_UPLOAD_NAME: ${{ github.event.inputs.PDF_UPLOAD_NAME }}
+
+      # 通知相关常量（在这里修改配置）
+      NOTIFICATION_REPO: 'your-username/notification-service'  # 修改为你的通知服务仓库
+      ENABLE_NOTIFICATION: true
+      NOTIFICATION_TITLE: 'JM漫画下载完成'
+
+      # 登录相关secrets
+      JM_USERNAME: ${{ secrets.JM_USERNAME }}
+      JM_PASSWORD: ${{ secrets.JM_PASSWORD }}
+
+      # 邮件相关secrets
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+      EMAIL_TITLE: ${{ secrets.EMAIL_TITLE }}
+      EMAIL_CONTENT: ${{ secrets.EMAIL_CONTENT }}
+
+      # 固定值
+      JM_DOWNLOAD_DIR: /home/runner/work/jmcomic/download/
+      JM_PDF_DIR: /home/runner/work/jmcomic/pdf/
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependency
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install img2pdf
+
+      - name: 安装jmcomic（pip）
+        if: ${{ github.ref != 'refs/heads/dev' }}
+        run: |
+          pip install jmcomic -i https://pypi.org/project --upgrade
+
+      - name: 安装jmcomic（local）
+        if: ${{ github.ref == 'refs/heads/dev' }}
+        run: |
+          pip install -e ./
+
+      - name: 运行下载脚本
+        run: |
+          cd ./usage/
+          python workflow_download.py
+
+      - name: 压缩图片文件
+        run: |
+          cd $JM_DOWNLOAD_DIR
+          tar -zcvf "../$ZIP_NAME" ./
+          mv "../$ZIP_NAME" .
+
+      - name: 压缩PDF文件
+        if: ${{ github.event.inputs.ENABLE_PDF == 'true' }}
+        run: |
+          if [ -d "$JM_PDF_DIR" ] && [ "$(ls -A $JM_PDF_DIR)" ]; then
+            cd $JM_PDF_DIR
+            zip -r "../$PDF_ZIP_NAME" ./
+            mv "../$PDF_ZIP_NAME" .
+          else
+            echo "PDF目录不存在或为空，跳过PDF压缩"
+          fi
+
+      - name: 上传图片结果
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.UPLOAD_NAME }}
+          path: ${{ env.JM_DOWNLOAD_DIR }}/${{ env.ZIP_NAME }}
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: 上传PDF结果
+        if: ${{ github.event.inputs.ENABLE_PDF == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PDF_UPLOAD_NAME }}
+          path: ${{ env.JM_PDF_DIR }}/${{ env.PDF_ZIP_NAME }}
+          if-no-files-found: ignore
+          retention-days: 90
+
+      # 准备通知附件
+      - name: 准备通知附件
+        if: ${{ github.event.inputs.ENABLE_NOTIFICATION == 'true' }}
+        id: prepare_attachments
+        run: |
+          echo "准备通知附件..."
+          
+          # 创建附件信息
+          attachments='[]'
+          
+          # 处理图片压缩包
+          if [ -f "$JM_DOWNLOAD_DIR/$ZIP_NAME" ]; then
+            echo "发现图片压缩包: $ZIP_NAME"
+            # 将文件转换为base64
+            image_content=$(base64 -w 0 "$JM_DOWNLOAD_DIR/$ZIP_NAME")
+            image_size=$(stat -c%s "$JM_DOWNLOAD_DIR/$ZIP_NAME")
+            
+            # 检查文件大小（GitHub API限制约为1MB）
+            if [ $image_size -lt 1048576 ]; then
+              attachments=$(echo "$attachments" | jq --arg filename "$ZIP_NAME" --arg content "$image_content" --arg type "application/gzip" '. += [{"filename": $filename, "content": $content, "encoding": "base64", "content_type": $type}]')
+              echo "图片压缩包已添加到附件列表"
+            else
+              echo "图片压缩包过大，跳过附件传输"
+            fi
+          fi
+          
+          # 处理PDF压缩包
+          if [ "$ENABLE_PDF" == "true" ] && [ -f "$JM_PDF_DIR/$PDF_ZIP_NAME" ]; then
+            echo "发现PDF压缩包: $PDF_ZIP_NAME"
+            pdf_content=$(base64 -w 0 "$JM_PDF_DIR/$PDF_ZIP_NAME")
+            pdf_size=$(stat -c%s "$JM_PDF_DIR/$PDF_ZIP_NAME")
+            
+            if [ $pdf_size -lt 1048576 ]; then
+              attachments=$(echo "$attachments" | jq --arg filename "$PDF_ZIP_NAME" --arg content "$pdf_content" --arg type "application/zip" '. += [{"filename": $filename, "content": $content, "encoding": "base64", "content_type": $type}]')
+              echo "PDF压缩包已添加到附件列表"
+            else
+              echo "PDF压缩包过大，跳过附件传输"
+            fi
+          fi
+          
+          # 输出附件信息供后续步骤使用
+          echo "attachments<<EOF" >> $GITHUB_OUTPUT
+          echo "$attachments" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "附件准备完成，共 $(echo "$attachments" | jq length) 个文件"
+
+      # 发送通知
+      - name: 发送下载完成通知
+        if: ${{ github.event.inputs.ENABLE_NOTIFICATION == 'true' }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.NOTIFICATION_TOKEN }}
+          repository: ${{ github.event.inputs.NOTIFICATION_REPO }}
+          event-type: send-notification
+          client-payload: |
+            {
+              "title": "${{ github.event.inputs.NOTIFICATION_TITLE }}",
+              "content": "JM漫画下载任务已完成！\n\n📋 任务详情：\n- 本子ID: ${{ github.event.inputs.JM_ALBUM_IDS || '未指定' }}\n- 章节ID: ${{ github.event.inputs.JM_PHOTO_IDS || '未指定' }}\n- 压缩包: ${{ github.event.inputs.ZIP_NAME }}\n- PDF文件: ${{ github.event.inputs.ENABLE_PDF == 'true' && github.event.inputs.PDF_ZIP_NAME || '未生成' }}\n- 执行时间: ${{ github.run_id }}\n\n🔗 查看详情: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "source": "jmcomic-crawler",
+              "timestamp": "${{ github.event.head_commit.timestamp }}",
+              "attachments": ${{ steps.prepare_attachments.outputs.attachments }},
+              "metadata": {
+                "workflow": "download_with_notification",
+                "run_id": "${{ github.run_id }}",
+                "repository": "${{ github.repository }}",
+                "actor": "${{ github.actor }}"
+              }
+            }
+
+      # 通知发送状态记录
+      - name: 记录通知状态
+        if: ${{ github.event.inputs.ENABLE_NOTIFICATION == 'true' }}
+        run: |
+          echo "=== 通知发送完成 ==="
+          echo "目标仓库: ${{ github.event.inputs.NOTIFICATION_REPO }}"
+          echo "通知标题: ${{ github.event.inputs.NOTIFICATION_TITLE }}"
+          echo "附件数量: $(echo '${{ steps.prepare_attachments.outputs.attachments }}' | jq length)"
+          echo "发送时间: $(date)"
