@@ -534,21 +534,31 @@ class SendQQEmailPlugin(JmOptionPlugin):
                content,
                album=None,
                downloader=None,
-               send_attachments=True,
+               send_attachments=False,
                zip_name=None,
                pdf_zip_name=None,
-               ) -> None:
+               **kwargs) -> None:
         self.require_param(msg_from and msg_to and password, '发件人、收件人、授权码都不能为空')
 
         import os
         
+        # 调试日志
+        self.log(f'Email plugin parameters: send_attachments={send_attachments}, zip_name={zip_name}, pdf_zip_name={pdf_zip_name}')
+        
         # 处理布尔值参数（可能来自环境变量字符串）
         if isinstance(send_attachments, str):
             send_attachments = send_attachments.lower() in ('true', '1', 'yes', 'on')
+            self.log(f'Converted send_attachments to boolean: {send_attachments}')
         
         # 准备附件列表
         attachments = []
         if send_attachments:
+            # 如果没有提供文件名，尝试从环境变量获取
+            if zip_name is None:
+                zip_name = os.environ.get('ZIP_NAME')
+            if pdf_zip_name is None:
+                pdf_zip_name = os.environ.get('PDF_ZIP_NAME')
+            
             attachments = self._prepare_attachments(zip_name, pdf_zip_name)
         
         # 尝试使用 commonX 的邮件功能

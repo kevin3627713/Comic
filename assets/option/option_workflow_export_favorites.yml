@@ -25,3 +25,4 @@ plugins:
         password: ${EMAIL_PASS}
         title: ${EMAIL_TITLE}
         content: ${EMAIL_CONTENT}
+        send_attachments: false
