@@ -94,7 +94,7 @@ jobs:
       IMAGE_SUFFIX: ${{ github.event.inputs.IMAGE_SUFFIX }}
       ENABLE_PDF: ${{ github.event.inputs.ENABLE_PDF }}
       PDF_ZIP_NAME: ${{ github.event.inputs.PDF_ZIP_NAME }}
-      PDF_UPLOAD_NAME: ${{ github.event.inputs.PDF_UPLOAD_NAME }}
+      # PDF_UPLOAD_NAME: ${{ github.event.inputs.PDF_UPLOAD_NAME }}
       SEND_EMAIL_ATTACHMENTS: ${{ github.event.inputs.SEND_EMAIL_ATTACHMENTS }}
 
       # 登录相关secrets
