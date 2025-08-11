@@ -55,11 +55,11 @@ on:
         description: PDF压缩文件名称
         required: false
 
-      PDF_UPLOAD_NAME:
-        type: string
-        default: Click me to download PDF
-        description: PDF上传文件名称
-        required: false
+      # PDF_UPLOAD_NAME:
+      #   type: string
+      #   default: Click me to download PDF
+      #   description: PDF上传文件名称
+      #   required: false
 
       SEND_EMAIL_ATTACHMENTS:
         type: boolean
@@ -111,6 +111,8 @@ jobs:
       # 固定值
       JM_DOWNLOAD_DIR: /home/runner/work/jmcomic/download/
       JM_PDF_DIR: /home/runner/work/jmcomic/pdf/
+      
+      PDF_UPLOAD_NAME: Click me to download PDF
 
     steps:
       - uses: actions/checkout@v4
