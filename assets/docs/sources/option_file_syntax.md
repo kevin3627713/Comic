@@ -42,6 +42,14 @@ client:
   # retry_times: 请求失败重试次数，默认为5
   retry_times: 5
 
+  # cache: 是否开启客户端级别的缓存，用于缓存已经请求过的元数据（如本子详情、搜索结果等），减少重复网络请求。
+  # 支持以下几种配置值（详见 CacheRegistry 类）：
+  #   - null 或 false (默认值): 关闭缓存，每次请求都重新发起。
+  #   - true 或 level_option: 开启 option 级别缓存，同一个 option 派生的所有 client 共享同一份缓存。
+  #   - level_client: 开启 client 级别缓存，每个 client 维持各自独立的缓存字典，互不干扰。
+  cache: null
+
+
   # postman: 请求配置
   postman:
     meta_data:
@@ -109,12 +117,23 @@ dir_rule:
   # 规则: 根目录 / 本子id / 章节序号 / 图片文件
   # rule: 'Bd  / Aid   / Pindex'
   # rule: 'Bd_Aid_Pindex'
-
   # 默认规则是: 根目录 / 章节标题 / 图片文件
-  rule: Bd_Ptitle
+  rule: Bd / Ptitle
   # jmcomic v2.5.36 以后，支持使用python的f-string的语法组合文件夹名，下为示例
   # rule: Bd / Aauthor / (JM{Aid}-{Pindex})-{Pname}
   # {}大括号里的内容同样是写 Axxx 或 Pxxx，其他语法自行参考python f-string的语法
+  # 另外，rule开头的Bd可忽略不写，因为程序会自动插入Bd
+
+  # normalize_zh: 可选。控制是否对目录/文件名中的中文进行繁简体规范化。
+  #   - None（默认）：不做任何转换，保持历史行为
+  #   - zh-cn：将中文文本规范为简体
+  #   - zh-tw：将中文文本规范为繁体
+  # 该功能依赖可选库 `zhconv`（非必需），若未安装或转换失败，程序会回退到原字符串并继续工作，不会影响下载流程。
+  # 示例：
+  # dir_rule:
+  #   base_dir: D:/a/b/c/
+  #   rule: Bd / Ptitle
+  #   normalize_zh: zh-cn
 ```
 
 ## 3. option插件配置项
@@ -126,6 +145,7 @@ dir_rule:
 plugins:
   after_init:
     - plugin: usage_log # 实时打印硬件占用率的插件
+      # log: false # 选填。所有的插件都可以配置 `log: false` 以关闭该插件执行时产生的日志输出，默认是 true
       kwargs:
         interval: 0.5 # 间隔时间
         enable_warning: true # 占用过大时发出预警
@@ -193,6 +213,15 @@ plugins:
           content: album update !!!
         album_photo_dict:
           324930: 424507
+
+  before_album:
+    - plugin: download_cover # 额外下载本子封面的插件
+      kwargs:
+        size: '_3x4' # 可选项，禁漫搜索页的封面图尺寸是 4x3，和详情页不一样，想下搜索页的封面就设置此项
+        dir_rule: # 封面图存放路径规则，写法同上
+          base_dir: D:/a/b/c/
+          rule: '{Atitle}/{Aid}_cover.jpg'
+    
 
   after_album:
     - plugin: zip # 压缩文件插件
