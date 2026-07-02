@@ -30,15 +30,15 @@
 > **🧭 快速指路**
 > - [教程：使用 GitHub Actions 下载禁漫本子](./assets/docs/sources/tutorial/1_github_actions.md)
 > - [教程：导出并下载你的禁漫收藏夹数据](./assets/docs/sources/tutorial/10_export_favorites.md)
-
-[【新功能】邮件通知：下载完成后自动发送邮件附件](./EMAIL_NOTIFICATION_SETUP.md)
+> - [教程：下载后转为 PDF / ZIP / 长图](./assets/docs/sources/tutorial/13_export_and_feature.md)
+> - [【新功能】邮件通知：下载完成后自动发送邮件附件](./EMAIL_NOTIFICATION_SETUP.md)
 > - [塔台广播：欢迎各位机长加入并贡献代码](./.github/CONTRIBUTING.md)
 > 
 > **友情提示：珍爱JM，为了减轻JM的服务器压力，请不要一次性爬取太多本子，西门🙏🙏🙏**.
 > 
 
 
-![introduction.jpg](./assets/docs/sources/images/introduction.jpg)
+![introduction.jpg](https://raw.githubusercontent.com/hect0x7/hect0x7/master/images/jmcomic-intro-main.png)
 
 
 ## 项目介绍
@@ -120,6 +120,10 @@
 ```python
 import jmcomic  # 导入此模块，需要先安装.
 jmcomic.download_album('123')  # 传入要下载的album的id，即可下载整个album到本地.
+
+# 也可以使用 Async API (详见教程: https://jmcomic.readthedocs.io/zh-cn/latest/tutorial/14_async_usage/)
+import asyncio
+asyncio.run(jmcomic.download_album_async('123'))
 ```
 
 上面的 `download_album`方法还有一个参数`option`，可用于控制下载配置，配置包括禁漫域名、网络代理、图片格式转换、插件等等。
@@ -155,7 +159,7 @@ jmcomic.download_album(123, option)
 ### 3. 使用命令行
 > 如果只想下载本子，使用命令行会比上述方式更加简单直接
 > 
-> 例如，在windows上，直接按下win+r键，输入jmcomic xxx就可以下载本子。
+> 例如，在windows上，直接按下 win+R 键，输入`jmcomic xxx`就可以下载本子。
 
 示例：
 
@@ -185,11 +189,67 @@ b. 配置环境变量 `JM_OPTION_PATH` 为option文件路径（推荐）
 jmcomic 123
 ```
 
+### 4. 查看本子详情（jmv 命令）
+
+> `jmv` 命令用于快速查看本子详情，不做下载。
+> 
+> **适用场景**：在某些网站上看到一串*神秘车号*，想快速看看具体是啥本子。此时只需copy原文本，按下 win+R，输入`jmv [粘贴内容]`即可
+>
+> 支持从任意文本中提取数字作为车号，方便直接粘贴各种格式的车号。
+
+示例：
+
+```sh
+# 直接输入车号
+jmv 350234
+
+# 从混合文本中提取数字（提取出 350234）
+jmv 350谁还没看过234
+
+# 指定option文件（也支持环境变量，用法同上）
+jmv 350234 --option="D:/a.yml"
+
+# -y 参数：执行完毕后直接退出，无需按回车确认
+jmv 350234 -y
+```
+
+输出效果：
+
+```text
+🔍 正在查询 禁漫车号 - [350234] 的详情...
+
+──────────────────────────────────────────────────
+  📖 标题:  xxx
+  🆔 ID:    JM350234
+  🔗 链接:  https://18comic.vip/album/350234/
+  ✍️ 作者:  Author1, Author2
+──────────────────────────────────────────────────
+  📅 发布日期:  2022-06-15
+  📅 更新日期:  2023-01-01
+  📄 总页数:    50
+  👀 观看:      2M
+  ❤️ 点赞:     77K
+  💬 评论:      9801
+──────────────────────────────────────────────────
+  🏷️ 标签:  标签1, 标签2, ...
+  🎭 人物:  角色A, 角色B, ...
+  📚 作品:  作品1, 作品2, ...
+──────────────────────────────────────────────────
+  📑 章节 (2):
+     第1話  上  (id: 350234)
+     第2話  下  (id: 350235)
+──────────────────────────────────────────────────
+
+[运行结束] 请按回车键关闭窗口... (下次运行可附加 -y 参数跳过确认)
+```
+
 
 
 ## 进阶使用
 
-请查阅文档首页→[jmcomic.readthedocs.io](https://jmcomic.readthedocs.io/zh-cn/latest)
+请查阅文档首页 → [jmcomic.readthedocs.io](https://jmcomic.readthedocs.io/zh-cn/latest)
+
+或者查看github仓库的文档 → [github-repo-docs](https://github.com/hect0x7/JMComic-Crawler-Python/blob/master/assets/docs/sources/tutorial/0_common_usage.md)
 
 （提示：jmcomic提供了很多下载配置项，大部分的下载需求你都可以尝试寻找相关配置项或插件来实现。）
 
@@ -203,9 +263,9 @@ jmcomic 123
     Actions：网页上直接输入本子id就能下载（[教程：使用GitHub Actions下载禁漫本子](./assets/docs/sources/tutorial/1_github_actions.md)）
   - 命令行：无需写Python代码，简单易用（[教程：使用命令行下载禁漫本子](./assets/docs/sources/tutorial/2_command_line.md)）
   - Python代码：最本质、最强大的使用方式，需要你有一定的python编程基础
+- **支持 Async 和 Sync 两套 API**
 - 支持**网页端**和**移动端**两种客户端实现，可通过配置切换（**移动端不限ip兼容性好，网页端限制ip地区但效率高**）
 - 支持**自动重试和域名切换**机制
-- **多线程下载**（可细化到一图一线程，效率极高）
 - **可配置性强**
 
   - 不配置也能使用，十分方便
@@ -217,26 +277,10 @@ jmcomic 123
   - 支持自定义本子/章节/图片下载前后的回调函数
   - 支持自定义类：`Downloader（负责调度）` `Option（负责配置）` `Client（负责请求）` `实体类`等
   - 支持自定义日志、异常监听器
-  - **支持Plugin插件，可以方便地扩展功能，以及使用别人的插件，目前内置插件有**：
-    - `登录插件`
-    - `硬件占用监控插件`
-    - `只下载新章插件`
-    - `压缩文件插件`
-    - `客户端代理插件`
-    - `下载特定后缀图片插件`
-    - `发送QQ邮件插件`
-    - `日志主题过滤插件`
-    - `自动获取浏览器cookies插件`
-    - `导出收藏夹为csv文件插件`
-    - `合并所有图片为pdf文件插件`
-    - `合并所有图片为长图png插件`
-    - `网页观看本地章节插件`
-    - `订阅更新插件`
-    - `小章节跳过插件`
-    - `重复文件检测删除插件`
-    - `路径字符串替换插件`
-    - `高级重试插件`
-    - `封面下载插件`
+  - **支持Plugin插件，可以方便地扩展功能，以及使用别人的插件，目前核心内置插件有**：
+    - `登录插件`、`只下载新章插件`、`导出收藏夹为csv文件插件`
+    - `合并所有图片为pdf文件插件`、`合并所有图片为长图png插件`
+    - `压缩文件插件`、`自动获取浏览器cookies插件`、`订阅更新插件`等
 
 ## 使用小说明
 
