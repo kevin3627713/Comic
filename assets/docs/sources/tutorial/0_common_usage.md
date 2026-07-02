@@ -38,7 +38,7 @@ download_album(123, option)
 option.download_album(123)
 ```
 
-## 获取本子/章节/图片的实体类，下载图片
+## 获取本子/章节/图片的实体类，下载图片/封面图
 
 ```python
 from jmcomic import *
@@ -49,23 +49,26 @@ client = JmOption.default().new_jm_client()
 # 本子实体类
 album: JmAlbumDetail = client.get_album_detail('427413')
 
+# 下载本子封面图，保存为 cover.png （图片后缀可指定为jpg、webp等）
+client.download_album_cover('427413', './cover.png')
+
 
 def fetch(photo: JmPhotoDetail):
     # 章节实体类
     photo = client.get_photo_detail(photo.photo_id, False)
     print(f'章节id: {photo.photo_id}')
-    
+
     # 图片实体类
     image: JmImageDetail
     for image in photo:
         print(f'图片url: {image.img_url}')
-        
+
     # 下载单个图片
     client.download_by_image_detail(image, './a.jpg')
     # 如果是已知未混淆的图片，也可以直接使用url来下载
     random_image_domain = JmModuleConfig.DOMAIN_IMAGE_LIST[0]
     client.download_image(f'https://{random_image_domain}/media/albums/416130.jpg', './a.jpg')
-    
+
 
 # 多线程发起请求
 multi_thread_launcher(
@@ -216,7 +219,7 @@ page: JmCategoryPage = cl.categories_filter(
     page=1,
     time=JmMagicConstants.TIME_ALL,  # 时间选择全部，具体可以写什么请见JmMagicConstants
     category=JmMagicConstants.CATEGORY_ALL,  # 分类选择全部，具体可以写什么请见JmMagicConstants
-    order_by=JmMagicConstants.ORDER_BY_LATEST,  # 按照观看数排序，具体可以写什么请见JmMagicConstants
+    order_by=JmMagicConstants.ORDER_BY_VIEW,  # 按照观看数排序，具体可以写什么请见JmMagicConstants
 )
 
 # 月排行，底层实现也是调的categories_filter
@@ -225,6 +228,7 @@ page: JmCategoryPage = cl.month_ranking(1)
 page: JmCategoryPage = cl.week_ranking(1)
 
 # 循环获取分页，使用 cl.categories_filter_gen
+# 基础用法：简单的 for 循环
 for page in cl.categories_filter_gen(page=1, # 起始页码
                                      # 下面是分类参数
                                      time=JmMagicConstants.TIME_WEEK,
@@ -233,6 +237,22 @@ for page in cl.categories_filter_gen(page=1, # 起始页码
                                      ):
     for aid, atitle in page:
         print(aid, atitle)
+
+# 高级用法：使用 generator 的 send() 方法在遍历中途动态修改查询条件
+# 注意：必须用 while 循环手动接收 send() 的返回值，避免在 for 循环内调用 send() 跳过分页
+generator = cl.categories_filter_gen(page=1, time=JmMagicConstants.TIME_WEEK)
+try:
+    page = next(generator)  # 预先启动生成器
+    while True:
+        # 打印第一页
+        for aid, atitle in page:
+            print(aid, atitle)
+        
+        # 假设我们只想看前一页，下一页想换一个排序方式
+        # 调用 send 传入包含新参数的 dict 即可覆盖原来的查询条件
+        page = generator.send({"order_by": JmMagicConstants.ORDER_BY_LATEST})
+except StopIteration:
+    pass
 
 ```
 
@@ -278,6 +298,19 @@ for page in html_cl.search_gen(search_query='mana',
     # 打印page内容
     for aid, atitle in page.iter_id_title():
         print(aid, atitle)
+
+# 高级用法：使用 generator 的 send() 方法进行手动翻页或修改查询条件
+generator = html_cl.search_gen('mana')
+try:
+    page = next(generator)
+    while True:
+        for aid, atitle in page.iter_id_title():
+            print(aid, atitle)
+        
+        # 可直接动态传参改变搜索条件，例如下一页换成搜索 'nana'
+        page = generator.send({"search_query": 'nana'})
+except StopIteration:
+    pass
 ```
 
 
